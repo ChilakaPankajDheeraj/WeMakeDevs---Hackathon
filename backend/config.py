@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     def effective_db_url(self) -> str:
         if self.is_supabase_enabled and self.DATABASE_URL.startswith("postgresql"):
             return self.DATABASE_URL
+        # On Vercel / serverless Linux containers, the deployment filesystem is read-only.
+        # Only /tmp is writable for SQLite database and WAL files.
+        if (os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME") or os.path.exists("/tmp")) and os.name != "nt":
+            return "sqlite:////tmp/aquanex.db"
         return "sqlite:///./aquanex.db"
 
     class Config:

@@ -18,8 +18,8 @@ try:
         pool_pre_ping=True
     )
 except Exception as e:
-    logger.warning(f"Failed to create primary engine ({e}), falling back to SQLite in-memory/file.")
-    engine = create_engine("sqlite:///./aquanex.db", echo=False, connect_args={"check_same_thread": False})
+    logger.warning(f"Failed to create primary engine ({e}), falling back to SQLite in-memory.")
+    engine = create_engine("sqlite:///:memory:", echo=False, connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

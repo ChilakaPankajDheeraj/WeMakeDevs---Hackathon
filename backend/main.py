@@ -102,8 +102,8 @@ logger = logging.getLogger("aquanex.api")
 async def lifespan(app: FastAPI):
     # Startup: initialize database and seed if required
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
-    init_db()
     try:
+        init_db()
         with SessionLocal() as db:
             seeded = seed_database_if_empty(db)
             if seeded:
@@ -160,12 +160,15 @@ def root():
     }
 
 @app.get("/api/health", response_model=HealthResponse, tags=["System"])
-def get_health(db: Session = Depends(get_db)):
-    db_status = check_db_connection()
+def get_health():
+    try:
+        db_status = check_db_connection()
+    except Exception as e:
+        db_status = {"status": "degraded", "error": str(e)}
     return {
-        "status": "healthy" if db_status["status"] == "connected" else "degraded",
+        "status": "healthy" if db_status.get("status") == "connected" else "degraded",
         "api_status": "operational",
-        "database_status": db_status["status"],
+        "database_status": db_status.get("status", "unknown"),
         "database_mode": settings.DATABASE_MODE,
         "risk_engine_status": "operational",
         "timestamp": datetime.datetime.utcnow().isoformat()
