@@ -233,3 +233,28 @@ def test_invalid_request_handling():
     }
     res = client.post("/api/simulate", json=invalid_payload)
     assert res.status_code == 422  # Unprocessable Entity
+
+# 12. Village Search & Live Climate Risk Analysis
+def test_villages_search_and_analyze():
+    # Test search with query
+    search_res = client.get("/api/villages/search?q=Guntur&count=5")
+    assert search_res.status_code == 200
+    search_data = search_res.json()
+    assert "results" in search_data
+    assert len(search_data["results"]) > 0
+    top = search_data["results"][0]
+    assert "latitude" in top
+    assert "longitude" in top
+
+    # Test analyze endpoint with village coordinates
+    analyze_res = client.get(f"/api/villages/analyze?lat={top['latitude']}&lon={top['longitude']}&name={top['name']}&admin1={top.get('admin1', 'AP')}&population={top.get('population', 50000)}")
+    assert analyze_res.status_code == 200
+    analyze_data = analyze_res.json()
+    assert "risks" in analyze_data
+    assert "overall_risk" in analyze_data["risks"]
+    assert "flood_risk" in analyze_data["risks"]
+    assert "heat_risk" in analyze_data["risks"]
+    assert "recommendations" in analyze_data
+    assert "observation_time" in analyze_data
+    assert "IST" in analyze_data["observation_time"]
+

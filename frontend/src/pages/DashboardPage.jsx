@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import VillageSearchBar from '../components/VillageSearchBar';
 import {
   CloudRain,
   Droplets,
@@ -34,6 +35,7 @@ import { useApp } from '../context/AppContext';
 import { formatIST } from '../utils/time';
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const { weatherMode, setWeatherMeta, fallbackToDemoMode } = useApp();
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -212,6 +214,41 @@ export default function DashboardPage() {
             Refresh Telemetry
           </button>
         </div>
+      </div>
+
+      {/* All-India Village Search Quick Action Banner */}
+      <div className="bg-gradient-to-r from-sky-900 via-slate-900 to-indigo-950 rounded-2xl p-4 sm:p-5 text-white shadow-sm border border-slate-800 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-sky-500/20 text-sky-300 border border-sky-400/30">
+              <MapPin className="h-4 w-4" />
+            </div>
+            <div>
+              <span className="text-sm font-bold block text-white flex items-center gap-1.5">
+                <span>Check Village Climate & Hydrology Risk (All-India)</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                  Live Open-Meteo
+                </span>
+              </span>
+              <span className="text-xs text-slate-300 block">
+                Type any village or town across Andhra Pradesh, Telangana, or India to inspect real-time rainfall, heat, and drought vulnerability.
+              </span>
+            </div>
+          </div>
+          <Link
+            to="/risk-map"
+            className="text-xs text-sky-300 hover:text-white font-semibold flex items-center gap-1 underline self-start sm:self-auto"
+          >
+            <span>Open Full Risk Map</span>
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+
+        <VillageSearchBar
+          onLocationSelect={() => {
+            navigate('/risk-map');
+          }}
+        />
       </div>
 
       {/* Top Level Summary Cards */}

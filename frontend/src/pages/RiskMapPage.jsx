@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import {
@@ -12,7 +12,11 @@ import {
   AlertTriangle,
   Info,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  BookmarkPlus,
+  Check,
+  Sparkles,
+  MapPinned
 } from 'lucide-react';
 import api from '../services/api';
 import RiskBadge, { getRiskColors } from '../components/RiskBadge';
@@ -20,6 +24,7 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import ErrorState from '../components/ErrorState';
 import { useApp } from '../context/AppContext';
 import { formatIST } from '../utils/time';
+import VillageSearchBar from '../components/VillageSearchBar';
 
 // Helper to create custom color-coded map pins using Leaflet divIcon
 function createMarkerIcon(riskLevel, score) {
@@ -69,14 +74,48 @@ function MapViewRecenter({ center }) {
 }
 
 export default function RiskMapPage() {
-  const { weatherMode, fallbackToDemoMode } = useApp();
+  const {
+    weatherMode,
+    fallbackToDemoMode,
+    customVillages,
+    addCustomVillage,
+    removeCustomVillage
+  } = useApp();
   const [mapData, setMapData] = useState(null);
   const [selectedLocationDetail, setSelectedLocationDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState(null);
   const [liveWeatherFailed, setLiveWeatherFailed] = useState(false);
-  const [mapCenter, setMapCenter] = useState([13.0827, 80.2707]);
+  const [mapCenter, setMapCenter] = useState([16.2997, 80.4573]);
+  const [searchedPin, setSearchedPin] = useState(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const allMarkers = useMemo(() => {
+    const list = [...(mapData?.locations || [])];
+    (customVillages || []).forEach((cv) => {
+      if (!list.some((m) => m.name.toLowerCase() === cv.name.toLowerCase())) {
+        list.push(cv);
+      }
+    });
+    if (searchedPin && !list.some((m) => m.name.toLowerCase() === searchedPin.name.toLowerCase())) {
+      list.push({
+        id: searchedPin.id || 88888,
+        name: searchedPin.name,
+        latitude: searchedPin.latitude,
+        longitude: searchedPin.longitude,
+        zone_type: `${searchedPin.admin1 || 'All-India'} Settlement`,
+        population: searchedPin.population || 15000,
+        overall_risk: searchedPin.risks?.overall_risk || 50.0,
+        risk_level: searchedPin.risks?.risk_level || 'MODERATE',
+        rainfall_mm: searchedPin.rainfall_mm || 0.0,
+        temperature_c: searchedPin.temperature_c || 28.0,
+        weather_description: searchedPin.weather_description || 'Live Telemetry',
+        isSearched: true
+      });
+    }
+    return list;
+  }, [mapData, customVillages, searchedPin]);
 
   const loadRiskMap = async () => {
     try {
@@ -187,17 +226,40 @@ export default function RiskMapPage() {
         </button>
       </div>
 
-      {/* Notice Banner */}
-      <div className="rounded-xl bg-slate-900 text-slate-300 p-3.5 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
-        <div className="flex items-center gap-2">
-          <Info className="h-4 w-4 text-sky-400 shrink-0" />
-          <span>
-            <strong>Simulation Sandbox:</strong> Pins indicate demo geographic centroids. Weather calculations by AquaNex engine. Maps &copy; OpenStreetMap contributors. Weather telemetry by Open-Meteo (CC-BY 4.0). Not official emergency warnings.
+      {/* All-India Village & Settlement Search Bar */}
+      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-sky-50 text-sky-600 border border-sky-100">
+              <MapPinned className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-1.5">
+                <span>All-India Village & Mandal Search</span>
+                <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-sky-100 text-sky-700 uppercase tracking-wide">
+                  Live
+                </span>
+              </h2>
+              <p className="text-xs text-slate-500">
+                Search any village across Andhra Pradesh, Telangana, or India to pin coordinates and evaluate live climate risk.
+              </p>
+            </div>
+          </div>
+          <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 self-start sm:self-auto flex items-center gap-1.5 shrink-0">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Real-time Open-Meteo Geocoding
           </span>
         </div>
-        <span className="hidden md:inline font-mono text-[11px] text-sky-400 bg-slate-800 px-2 py-0.5 rounded shrink-0">
-          EPSG:3857
-        </span>
+
+        <VillageSearchBar
+          onLocationSelect={(village) => {
+            setSearchedPin(village);
+            setSelectedLocationDetail(village);
+            if (village.latitude && village.longitude) {
+              setMapCenter([village.latitude, village.longitude]);
+            }
+          }}
+        />
       </div>
 
       {error ? (
@@ -244,13 +306,20 @@ export default function RiskMapPage() {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
 
-              {(mapData?.locations || []).map((loc) => (
+              {allMarkers.map((loc) => (
                 <Marker
-                  key={loc.id}
+                  key={`${loc.name}-${loc.latitude}-${loc.longitude}`}
                   position={[loc.latitude, loc.longitude]}
                   icon={createMarkerIcon(loc.risk_level, loc.overall_risk)}
                   eventHandlers={{
-                    click: () => fetchLocationDetail(loc.id),
+                    click: () => {
+                      if (loc.isSearched || loc.isCustom) {
+                        setSelectedLocationDetail(loc);
+                      } else {
+                        fetchLocationDetail(loc.id);
+                      }
+                      setMapCenter([loc.latitude, loc.longitude]);
+                    },
                   }}
                 >
                   <Popup>
@@ -332,13 +401,48 @@ export default function RiskMapPage() {
                     {selectedLocationDetail.name}
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    {selectedLocationDetail.zone_type} • Population: {selectedLocationDetail.population.toLocaleString()}
+                    {selectedLocationDetail.zone_type || `${selectedLocationDetail.admin1 || 'India'} Settlement`} • Population: {Number(selectedLocationDetail.population || 15000).toLocaleString()}
                   </p>
                   {weatherMode === 'live' && selectedLocationDetail.weather_observation_time && (
                     <p className="text-[11px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded mt-2 inline-block">
                       Observed: {formatIST(selectedLocationDetail.weather_observation_time)}
                     </p>
                   )}
+
+                  {/* Pin to Monitored Zones Action Button */}
+                  <div className="mt-3">
+                    {customVillages?.some((cv) => cv.name.toLowerCase() === selectedLocationDetail.name.toLowerCase()) ? (
+                      <button
+                        type="button"
+                        onClick={() => removeCustomVillage(selectedLocationDetail.id)}
+                        className="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-rose-50 text-emerald-800 hover:text-rose-700 border border-emerald-200 hover:border-rose-200 text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                        title="Click to remove from monitored sectors"
+                      >
+                        <Check className="h-4 w-4 text-emerald-600" />
+                        <span>Monitored in Command Center (Click to Unpin)</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          addCustomVillage(selectedLocationDetail);
+                          setSaveSuccess(true);
+                          setTimeout(() => setSaveSuccess(false), 3500);
+                        }}
+                        className="w-full py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <BookmarkPlus className="h-4 w-4" />
+                        <span>Add Village to Monitored Sectors</span>
+                      </button>
+                    )}
+
+                    {saveSuccess && (
+                      <div className="mt-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-800 flex items-center gap-1.5 animate-in fade-in">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <span>Village pinned! It is now selectable in the top Navbar, Tanker Optimizer, and Command Center.</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Telemetry Grid */}

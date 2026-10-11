@@ -9,7 +9,7 @@ Documentation: https://open-meteo.com/en/docs
 import logging
 import time
 import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import httpx
 
 logger = logging.getLogger("aquanex.weather_service")
@@ -167,3 +167,100 @@ def fetch_live_weather(
     parsed["cached"] = False
     _WEATHER_CACHE[cache_key] = (now, parsed)
     return parsed
+
+OPEN_METEO_GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
+_GEOCODE_CACHE: Dict[str, tuple[float, List[Dict[str, Any]]]] = {}
+
+POPULAR_INDIAN_LOCATIONS: List[Dict[str, Any]] = [
+    {"name": "Guntur", "admin1": "Andhra Pradesh", "country": "India", "latitude": 16.29974, "longitude": 80.45729, "zone_type": "District Headquarters", "population": 743000},
+    {"name": "Vijayawada", "admin1": "Andhra Pradesh", "country": "India", "latitude": 16.50617, "longitude": 80.64802, "zone_type": "Commercial River Basin", "population": 1048000},
+    {"name": "Tenali", "admin1": "Andhra Pradesh", "country": "India", "latitude": 16.24253, "longitude": 80.63982, "zone_type": "Agricultural Delta Town", "population": 164000},
+    {"name": "Kollipara", "admin1": "Andhra Pradesh", "country": "India", "latitude": 16.28756, "longitude": 80.74998, "zone_type": "Riverbank Village", "population": 18500},
+    {"name": "Bhimavaram", "admin1": "Andhra Pradesh", "country": "India", "latitude": 16.54078, "longitude": 81.52322, "zone_type": "Coastal Aquaculture Basin", "population": 142000},
+    {"name": "Tirupati", "admin1": "Andhra Pradesh", "country": "India", "latitude": 13.62876, "longitude": 79.41918, "zone_type": "Foothill Urban Zone", "population": 287000},
+    {"name": "Visakhapatnam", "admin1": "Andhra Pradesh", "country": "India", "latitude": 17.68682, "longitude": 83.21848, "zone_type": "Coastal Port Metropole", "population": 2035000},
+    {"name": "Hyderabad", "admin1": "Telangana", "country": "India", "latitude": 17.38504, "longitude": 78.48667, "zone_type": "Mega Urban Basin", "population": 6800000},
+    {"name": "Warangal", "admin1": "Telangana", "country": "India", "latitude": 17.96890, "longitude": 79.59405, "zone_type": "Historical Tank Cascade", "population": 811000},
+    {"name": "Siddipet", "admin1": "Telangana", "country": "India", "latitude": 18.10483, "longitude": 78.84858, "zone_type": "Semi-Arid Watershed", "population": 111000},
+    {"name": "Bengaluru", "admin1": "Karnataka", "country": "India", "latitude": 12.97160, "longitude": 77.59456, "zone_type": "Plateau Urban Hub", "population": 8443000},
+    {"name": "Chennai", "admin1": "Tamil Nadu", "country": "India", "latitude": 13.08268, "longitude": 80.27072, "zone_type": "Coastal Metropolis", "population": 7088000},
+    {"name": "Mumbai", "admin1": "Maharashtra", "country": "India", "latitude": 19.07609, "longitude": 72.87743, "zone_type": "High-Density Coastal Zone", "population": 12442000},
+    {"name": "New Delhi", "admin1": "Delhi", "country": "India", "latitude": 28.61394, "longitude": 77.20902, "zone_type": "Northern Continental Core", "population": 16787941}
+]
+
+def search_locations(
+    query: str,
+    count: int = 10,
+    timeout_seconds: float = 5.0
+) -> List[Dict[str, Any]]:
+    """
+    Searches for villages, mandals, towns, and cities across All-India (and worldwide)
+    using the Open-Meteo Geocoding API. Prioritizes Indian locations for relevant matches.
+    """
+    clean_q = query.strip()
+    if not clean_q:
+        return POPULAR_INDIAN_LOCATIONS[:count]
+
+    cache_key = f"{clean_q.lower()}:{count}"
+    now = time.time()
+    if cache_key in _GEOCODE_CACHE:
+        cached_time, cached_results = _GEOCODE_CACHE[cache_key]
+        if now - cached_time < 600:
+            return cached_results
+
+    params = {
+        "name": clean_q,
+        "count": count * 2,
+        "language": "en",
+        "format": "json"
+    }
+
+    try:
+        with httpx.Client(timeout=timeout_seconds) as client:
+            resp = client.get(OPEN_METEO_GEOCODING_URL, params=params)
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as exc:
+        logger.warning(f"Geocoding search failed for '{clean_q}': {exc}")
+        matched = [
+            loc for loc in POPULAR_INDIAN_LOCATIONS
+            if clean_q.lower() in loc["name"].lower() or clean_q.lower() in loc.get("admin1", "").lower()
+        ]
+        return matched or POPULAR_INDIAN_LOCATIONS[:count]
+
+    raw_results = data.get("results", [])
+    if not raw_results:
+        matched = [
+            loc for loc in POPULAR_INDIAN_LOCATIONS
+            if clean_q.lower() in loc["name"].lower() or clean_q.lower() in loc.get("admin1", "").lower()
+        ]
+        return matched
+
+    india_matches = []
+    other_matches = []
+    for item in raw_results:
+        is_india = (item.get("country_code") == "IN") or (item.get("country") == "India")
+        loc_obj = {
+            "id": item.get("id"),
+            "name": item.get("name"),
+            "admin1": item.get("admin1", ""),
+            "admin2": item.get("admin2", ""),
+            "admin3": item.get("admin3", ""),
+            "country": item.get("country", "India" if is_india else ""),
+            "country_code": item.get("country_code", "IN" if is_india else ""),
+            "latitude": round(float(item.get("latitude", 0.0)), 5),
+            "longitude": round(float(item.get("longitude", 0.0)), 5),
+            "population": item.get("population") or 15000,
+            "elevation": item.get("elevation", 0),
+            "timezone": item.get("timezone", "Asia/Kolkata"),
+            "display_name": f"{item.get('name')}, {item.get('admin1', '')} ({item.get('country', '')})".replace(",  (", " (")
+        }
+        if is_india:
+            india_matches.append(loc_obj)
+        else:
+            other_matches.append(loc_obj)
+
+    final_results = (india_matches + other_matches)[:count]
+    _GEOCODE_CACHE[cache_key] = (now, final_results)
+    return final_results
+

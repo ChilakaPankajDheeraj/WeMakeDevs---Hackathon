@@ -23,6 +23,17 @@ export function AppProvider({ children }) {
   });
   const [weatherError, setWeatherError] = useState(null);
 
+  // Custom All-India Village/Location Management persisted in localStorage
+  const [customVillages, setCustomVillages] = useState(() => {
+    try {
+      const saved = localStorage.getItem('aquanex_custom_villages');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [activeVillageInspection, setActiveVillageInspection] = useState(null);
+
   const checkStatus = useCallback(async () => {
     try {
       setIsLoadingStatus(true);
@@ -48,9 +59,16 @@ export function AppProvider({ children }) {
       try {
         const mapData = await api.getRiskMap(activeMode);
         if (mapData && mapData.locations) {
-          setLocationsList(mapData.locations);
-          if (!selectedLocationId && mapData.locations.length > 0) {
-            setSelectedLocationId(mapData.locations[0].id);
+          const combined = [...mapData.locations];
+          // Merge custom saved villages
+          customVillages.forEach((cv) => {
+            if (!combined.some((l) => l.id === cv.id || l.name === cv.name)) {
+              combined.push(cv);
+            }
+          });
+          setLocationsList(combined);
+          if (!selectedLocationId && combined.length > 0) {
+            setSelectedLocationId(combined[0].id);
           }
         }
       } catch (mapErr) {
@@ -59,7 +77,13 @@ export function AppProvider({ children }) {
           setWeatherModeState('demo');
           const fallbackMap = await api.getRiskMap('demo');
           if (fallbackMap && fallbackMap.locations) {
-            setLocationsList(fallbackMap.locations);
+            const combined = [...fallbackMap.locations];
+            customVillages.forEach((cv) => {
+              if (!combined.some((l) => l.id === cv.id || l.name === cv.name)) {
+                combined.push(cv);
+              }
+            });
+            setLocationsList(combined);
           }
         }
       }
@@ -71,7 +95,7 @@ export function AppProvider({ children }) {
     } finally {
       setIsLoadingStatus(false);
     }
-  }, [selectedLocationId]);
+  }, [selectedLocationId, customVillages]);
 
   // Mode switcher handler
   const setWeatherMode = useCallback(async (newMode) => {
@@ -94,6 +118,70 @@ export function AppProvider({ children }) {
       console.warn('Fallback setWeatherMode error:', err);
       setWeatherModeState('demo');
     }
+  }, []);
+
+  // Add a searched village to the active monitored locations list
+  const addCustomVillage = useCallback((villageData) => {
+    const newId = villageData.id || Math.floor(20000 + Math.random() * 80000);
+    const newLocation = {
+      id: newId,
+      name: villageData.name,
+      admin1: villageData.admin1 || '',
+      latitude: Number(villageData.latitude),
+      longitude: Number(villageData.longitude),
+      zone_type: `${villageData.admin1 || 'Rural Basin'} Village`,
+      population: villageData.population || 15000,
+      overall_risk: villageData.risks?.overall_risk || 50.0,
+      risk_level: villageData.risks?.risk_level || 'MODERATE',
+      flood_risk: villageData.risks?.flood_risk || 20.0,
+      shortage_risk: villageData.risks?.shortage_risk || 40.0,
+      heat_risk: villageData.risks?.heat_risk || 45.0,
+      leak_risk: villageData.risks?.leak_risk || 15.0,
+      rainfall_mm: villageData.rainfall_mm || 0.0,
+      rainfall_intensity: villageData.rainfall_intensity || 0.0,
+      temperature_c: villageData.temperature_c || 28.0,
+      humidity_percent: villageData.humidity_percent || 60.0,
+      groundwater_percent: villageData.groundwater_percent || 45.0,
+      daily_demand_liters: villageData.daily_demand_liters || 2025000,
+      daily_supply_liters: villageData.daily_supply_liters || 1660500,
+      weather_source: villageData.weather_source || 'Open-Meteo Weather API',
+      weather_observation_time: villageData.observation_time || null,
+      weather_description: villageData.weather_description || 'Live Telemetry',
+      hydrology_source: 'Simulated Baseline',
+      isCustom: true
+    };
+
+    setCustomVillages((prev) => {
+      const filtered = prev.filter((p) => p.name.toLowerCase() !== newLocation.name.toLowerCase());
+      const updated = [newLocation, ...filtered];
+      try {
+        localStorage.setItem('aquanex_custom_villages', JSON.stringify(updated));
+      } catch (err) {
+        console.warn('Could not save to localStorage:', err);
+      }
+      return updated;
+    });
+
+    setLocationsList((prev) => {
+      const filtered = prev.filter((p) => p.name.toLowerCase() !== newLocation.name.toLowerCase());
+      return [newLocation, ...filtered];
+    });
+
+    setSelectedLocationId(newId);
+    return newLocation;
+  }, []);
+
+  const removeCustomVillage = useCallback((villageId) => {
+    setCustomVillages((prev) => {
+      const updated = prev.filter((p) => p.id !== villageId);
+      try {
+        localStorage.setItem('aquanex_custom_villages', JSON.stringify(updated));
+      } catch (err) {
+        console.warn('Could not save to localStorage:', err);
+      }
+      return updated;
+    });
+    setLocationsList((prev) => prev.filter((p) => p.id !== villageId));
   }, []);
 
   useEffect(() => {
@@ -122,6 +210,11 @@ export function AppProvider({ children }) {
     weatherError,
     setWeatherError,
     fallbackToDemoMode,
+    customVillages,
+    addCustomVillage,
+    removeCustomVillage,
+    activeVillageInspection,
+    setActiveVillageInspection,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -134,3 +227,4 @@ export function useApp() {
   }
   return context;
 }
+

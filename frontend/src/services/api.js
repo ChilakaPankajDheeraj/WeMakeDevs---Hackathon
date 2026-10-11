@@ -83,6 +83,35 @@ export const api = {
 
   // Recommendations
   getRecommendations: (params = {}) => client.get('/api/recommendations', { params }).then((r) => r.data),
+
+  // Village & All-India Location Intelligence
+  searchVillages: async (query, count = 10) => {
+    try {
+      const res = await client.get('/api/villages/search', { params: { q: query, count } });
+      return res.data?.results || [];
+    } catch {
+      try {
+        const resp = await axios.get('https://geocoding-api.open-meteo.com/v1/search', {
+          params: { name: query, count, language: 'en', format: 'json' }
+        });
+        return (resp.data?.results || []).map((item) => ({
+          id: item.id,
+          name: item.name,
+          admin1: item.admin1 || '',
+          admin2: item.admin2 || '',
+          country: item.country || 'India',
+          country_code: item.country_code || 'IN',
+          latitude: Number(item.latitude),
+          longitude: Number(item.longitude),
+          population: item.population || 15000,
+          display_name: `${item.name}, ${item.admin1 || ''} (${item.country || 'India'})`
+        }));
+      } catch {
+        return [];
+      }
+    }
+  },
+  analyzeVillage: (params) => client.get('/api/villages/analyze', { params }).then((r) => r.data),
 };
 
 export default api;

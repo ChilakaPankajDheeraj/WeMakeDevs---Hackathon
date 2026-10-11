@@ -78,14 +78,21 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
               <select
                 value={selectedLocationId || ''}
                 onChange={(e) => setSelectedLocationId(Number(e.target.value))}
-                className="bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
+                className="bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer max-w-[210px] truncate"
               >
                 {locationsList.map((loc) => (
                   <option key={loc.id} value={loc.id}>
-                    {loc.name} ({loc.zone_type})
+                    {loc.isCustom ? '📍 ' : ''}{loc.name} ({loc.zone_type})
                   </option>
                 ))}
               </select>
+              <Link
+                to="/risk-map"
+                className="text-[11px] font-bold text-sky-600 hover:text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md hover:bg-sky-100 transition shrink-0 ml-1"
+                title="Search any village across All-India"
+              >
+                + Village
+              </Link>
             </div>
 
             {/* Mode Switcher (Prototype vs Live Open-Meteo) */}
@@ -177,10 +184,16 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
             >
               {locationsList.map((loc) => (
                 <option key={loc.id} value={loc.id}>
-                  {loc.name}
+                  {loc.isCustom ? '📍 ' : ''}{loc.name}
                 </option>
               ))}
             </select>
+            <Link
+              to="/risk-map"
+              className="text-[10px] font-bold text-sky-600 shrink-0 px-1.5 py-0.5 rounded bg-sky-50"
+            >
+              + Search
+            </Link>
           </div>
 
           <div className="flex items-center p-0.5 bg-slate-200/80 border border-slate-300/70 rounded-lg text-xs shrink-0 shadow-2xs">

@@ -96,7 +96,7 @@ from backend.recommendation_engine import generate_recommendations
 from backend.leak_detection import analyze_leak_anomaly
 from backend.tanker_optimizer import optimize_tanker_allocation
 from backend.seed_data import seed_database_if_empty
-from backend.weather_service import fetch_live_weather, WeatherServiceError
+from backend.weather_service import fetch_live_weather, WeatherServiceError, search_locations, POPULAR_INDIAN_LOCATIONS
 
 # Global runtime state for Data Source Mode ("demo" or "live")
 CURRENT_WEATHER_MODE = settings.WEATHER_DATA_MODE  # Default: "demo"
@@ -556,6 +556,114 @@ def get_location_detail(location_id: int, mode: Optional[str] = None, db: Sessio
         weather_description=weather_desc,
         hydrology_source="Simulated Hydrology Baseline"
     )
+
+# --- 4b. All-India Village & City Search & Real-time Analysis ---
+
+@app.get("/api/villages/search", tags=["Villages"])
+def search_villages(
+    q: str = Query("", description="Village, mandal, town, or city name to search across India"),
+    count: int = Query(10, ge=1, le=25)
+):
+    """
+    All-India village & city geocoding search with live coordinates.
+    Prioritizes Andhra Pradesh, Telangana, and Indian settlements.
+    Returns popular presets when query is empty.
+    """
+    results = search_locations(q, count=count)
+    return {
+        "query": q,
+        "count": len(results),
+        "results": results
+    }
+
+@app.get("/api/villages/analyze", tags=["Villages"])
+def analyze_village(
+    lat: float = Query(..., description="Village latitude"),
+    lon: float = Query(..., description="Village longitude"),
+    name: str = Query("Monitored Village", description="Village or location name"),
+    admin1: str = Query("India", description="State or region"),
+    population: int = Query(15000, description="Estimated population")
+):
+    """
+    Fetches live Open-Meteo weather for any village in India and evaluates
+    real-time environmental risk (flood, heat, shortage, drought) + recommendations.
+    """
+    try:
+        live_w = fetch_live_weather(lat, lon)
+        rain_val = live_w["rainfall_mm"]
+        intensity_val = live_w["rainfall_intensity"]
+        temp_val = live_w["temperature_c"]
+        hum_val = live_w["humidity_percent"]
+        weather_desc = live_w["weather_description"]
+        obs_time = live_w["observation_time"]
+        weather_source = "Open-Meteo Weather API (CC-BY 4.0)"
+    except Exception as exc:
+        logger.warning(f"Live weather fallback for village ({lat}, {lon}): {exc}")
+        rain_val = 0.0
+        intensity_val = 0.0
+        temp_val = 28.5
+        hum_val = 60.0
+        weather_desc = "Baseline Simulation"
+        obs_time = get_ist_obs_str()
+        weather_source = "Simulated Baseline"
+
+    # Simulated hydrologic baselines adapted to population
+    per_capita = 135
+    daily_demand = population * per_capita
+    daily_supply = daily_demand * 0.82
+    gw_pct = 45.0
+    drainage_pct = 50.0
+    soil_sat = min(95.0, max(20.0, 30.0 + rain_val * 1.5))
+
+    eval_dict = {
+        "rainfall_mm": rain_val,
+        "rainfall_intensity": intensity_val,
+        "temperature_c": temp_val,
+        "humidity_percent": hum_val,
+        "groundwater_percent": gw_pct,
+        "daily_demand_liters": daily_demand,
+        "daily_supply_liters": daily_supply,
+        "drainage_capacity_percent": drainage_pct,
+        "soil_saturation_percent": soil_sat,
+        "historical_flooding_index": 40.0,
+        "historical_drought_index": 45.0
+    }
+    eval_res = evaluate_full_risk_profile(eval_dict)
+    assess = eval_res["assessment"]
+    details = eval_res["details"]
+
+    loc_payload = {
+        "id": 9999,
+        "name": name,
+        "daily_demand_liters": daily_demand,
+        "daily_supply_liters": daily_supply,
+        "groundwater_percent": gw_pct,
+        "temperature_c": temp_val
+    }
+    forecast_data = generate_7day_water_forecast(loc_payload)["forecast_days"]
+    recs = generate_recommendations(9999, name, assess)
+
+    return {
+        "name": name,
+        "admin1": admin1,
+        "latitude": lat,
+        "longitude": lon,
+        "population": population,
+        "rainfall_mm": rain_val,
+        "rainfall_intensity": intensity_val,
+        "temperature_c": temp_val,
+        "humidity_percent": hum_val,
+        "groundwater_percent": gw_pct,
+        "daily_demand_liters": round(daily_demand, 0),
+        "daily_supply_liters": round(daily_supply, 0),
+        "weather_description": weather_desc,
+        "weather_source": weather_source,
+        "observation_time": obs_time,
+        "risks": assess,
+        "risk_details": details,
+        "forecast_7d": forecast_data,
+        "recommendations": recs
+    }
 
 # --- 5. Alerts & Acknowledgement ---
 
