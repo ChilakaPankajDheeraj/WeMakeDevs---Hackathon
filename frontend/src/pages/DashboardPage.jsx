@@ -31,6 +31,7 @@ import RiskBadge from '../components/RiskBadge';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ErrorState from '../components/ErrorState';
 import { useApp } from '../context/AppContext';
+import { formatIST } from '../utils/time';
 
 export default function DashboardPage() {
   const { weatherMode, setWeatherMeta, fallbackToDemoMode } = useApp();
@@ -193,7 +194,7 @@ export default function DashboardPage() {
             Real-time environmental telemetry synthesis across monitored municipal sectors.
             {weatherMode === 'live' && dashboard?.weather_observation_time && (
               <span className="ml-2 font-mono text-xs text-slate-400">
-                (Observation: {dashboard.weather_observation_time})
+                (Observation: {formatIST(dashboard.weather_observation_time)})
               </span>
             )}
           </p>
@@ -201,7 +202,7 @@ export default function DashboardPage() {
 
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-400 font-mono hidden md:inline">
-            Updated: {dashboard?.last_refresh || 'Just now'}
+            Updated: {formatIST(dashboard?.last_refresh, true)}
           </span>
           <button
             onClick={fetchDashboardData}

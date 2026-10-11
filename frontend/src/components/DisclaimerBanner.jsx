@@ -1,6 +1,7 @@
 import React from 'react';
 import { Info, Radio, Globe } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { formatIST } from '../utils/time';
 
 export default function DisclaimerBanner({ compact = false }) {
   const { weatherMode, setWeatherMode, weatherMeta } = useApp();
@@ -35,7 +36,7 @@ export default function DisclaimerBanner({ compact = false }) {
         <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
           <div className="flex items-center gap-1.5 font-mono text-[11px] text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded">
             <Globe className="h-3 w-3" />
-            <span>Observed: {weatherMeta?.observation_time || 'Realtime Sync'}</span>
+            <span>Observed: {formatIST(weatherMeta?.observation_time)}</span>
           </div>
           <button
             type="button"

@@ -142,6 +142,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# IST Timezone Configuration (UTC+5:30)
+IST_TZ = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+
+def get_ist_now() -> datetime.datetime:
+    return datetime.datetime.now(IST_TZ)
+
+def get_ist_timestamp_str() -> str:
+    return get_ist_now().strftime("%Y-%m-%d %I:%M:%S %p IST")
+
+def get_ist_obs_str() -> str:
+    return get_ist_now().strftime("%Y-%m-%d %I:%M %p IST")
+
 # Global safe error handling
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
@@ -150,7 +162,7 @@ async def global_exception_handler(request, exc):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "detail": "An internal server error occurred. Please verify telemetry inputs or check service status.",
-            "timestamp": datetime.datetime.utcnow().isoformat()
+            "timestamp": get_ist_now().isoformat()
         }
     )
 
@@ -180,7 +192,7 @@ def get_health():
         "database_status": db_status.get("status", "unknown"),
         "database_mode": settings.DATABASE_MODE,
         "risk_engine_status": "operational",
-        "timestamp": datetime.datetime.utcnow().isoformat()
+        "timestamp": get_ist_now().isoformat()
     }
 
 @app.get("/api/system-status", response_model=SystemStatusResponse, tags=["System"])
@@ -195,7 +207,7 @@ def get_system_status(db: Session = Depends(get_db)):
         "database_mode": f"{settings.DATABASE_MODE} ({'Supabase Cloud' if settings.is_supabase_enabled else 'Local SQLite'})",
         "risk_engine_status": "operational (deterministic heuristics)",
         "data_mode": settings.DATA_MODE_LABEL,
-        "timestamp": datetime.datetime.utcnow().isoformat(),
+        "timestamp": get_ist_now().isoformat(),
         "active_alerts_count": active_alerts,
         "locations_count": locations_count
     }
@@ -209,7 +221,7 @@ def get_weather_mode():
         mode=CURRENT_WEATHER_MODE,
         label="Live Weather Data (Open-Meteo)" if is_live else "Prototype Mode • Simulated Data",
         source="Open-Meteo Weather API (CC-BY 4.0)" if is_live else "Simulated Baseline Engine",
-        timestamp=datetime.datetime.utcnow().isoformat(),
+        timestamp=get_ist_now().isoformat(),
         description="Real-time atmospheric telemetry via Open-Meteo" if is_live else "Deterministic seeded environmental telemetry"
     )
 
@@ -280,7 +292,7 @@ def get_dashboard(mode: Optional[str] = None, db: Session = Depends(get_db)):
         temp_val = l.temperature_c
         hum_val = l.humidity_percent
         weather_desc = "Simulated Baseline"
-        obs_time = datetime.datetime.utcnow().isoformat()
+        obs_time = get_ist_obs_str()
 
         if is_live:
             try:
@@ -367,7 +379,7 @@ def get_dashboard(mode: Optional[str] = None, db: Session = Depends(get_db)):
         "recent_readings": recent_readings,
         "risk_trends": trends,
         "data_mode": "Live Weather Data (Open-Meteo)" if is_live else settings.DATA_MODE_LABEL,
-        "last_refresh": datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "last_refresh": get_ist_timestamp_str(),
         "disclaimer": "Live Weather Data integrated with simulated urban hydrology." if is_live else "Prototype Command Center • Data is simulated for demonstration.",
         "weather_mode": "live" if is_live else "demo",
         "weather_source": "Open-Meteo Weather API (CC-BY 4.0)" if is_live else "Simulated Baseline",
@@ -389,7 +401,7 @@ def get_risk_map(mode: Optional[str] = None, db: Session = Depends(get_db)):
         temp_val = l.temperature_c
         hum_val = l.humidity_percent
         weather_desc = "Simulated Baseline"
-        obs_time = datetime.datetime.utcnow().isoformat()
+        obs_time = get_ist_obs_str()
 
         if is_live:
             try:
@@ -471,7 +483,7 @@ def get_location_detail(location_id: int, mode: Optional[str] = None, db: Sessio
     temp_val = loc.temperature_c
     hum_val = loc.humidity_percent
     weather_desc = "Simulated Baseline"
-    obs_time = datetime.datetime.utcnow().isoformat()
+    obs_time = get_ist_obs_str()
 
     if is_live:
         try:

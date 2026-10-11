@@ -19,6 +19,7 @@ import RiskBadge, { getRiskColors } from '../components/RiskBadge';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ErrorState from '../components/ErrorState';
 import { useApp } from '../context/AppContext';
+import { formatIST } from '../utils/time';
 
 // Helper to create custom color-coded map pins using Leaflet divIcon
 function createMarkerIcon(riskLevel, score) {
@@ -335,7 +336,7 @@ export default function RiskMapPage() {
                   </p>
                   {weatherMode === 'live' && selectedLocationDetail.weather_observation_time && (
                     <p className="text-[11px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded mt-2 inline-block">
-                      Observed: {selectedLocationDetail.weather_observation_time}
+                      Observed: {formatIST(selectedLocationDetail.weather_observation_time)}
                     </p>
                   )}
                 </div>

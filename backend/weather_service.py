@@ -8,6 +8,7 @@ Documentation: https://open-meteo.com/en/docs
 
 import logging
 import time
+import datetime
 from typing import Dict, Any, Optional
 import httpx
 
@@ -57,6 +58,26 @@ def clear_weather_cache():
 def _get_cache_key(lat: float, lon: float) -> str:
     return f"{round(lat, 3)}:{round(lon, 3)}"
 
+def format_to_ist(obs_raw: str) -> str:
+    """Formats raw ISO time string into clean Indian Standard Time (IST)."""
+    if not obs_raw:
+        now_ist = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5, minutes=30)))
+        return now_ist.strftime("%Y-%m-%d %I:%M %p IST")
+    try:
+        clean = obs_raw.replace("T", " ")
+        if ":" in clean:
+            parts = clean.split(" ")
+            d_part = parts[0]
+            t_part = parts[1]
+            h, m = t_part.split(":")[:2]
+            hi = int(h)
+            ampm = "AM" if hi < 12 else "PM"
+            h12 = hi % 12 or 12
+            return f"{d_part} {h12:02d}:{m} {ampm} IST"
+    except Exception:
+        pass
+    return f"{obs_raw} IST"
+
 def parse_open_meteo_response(data: Dict[str, Any], lat: float, lon: float) -> Dict[str, Any]:
     """Parses raw Open-Meteo JSON into AquaNex normalized weather format."""
     current = data.get("current", {})
@@ -89,7 +110,7 @@ def parse_open_meteo_response(data: Dict[str, Any], lat: float, lon: float) -> D
         "weather_code": w_code,
         "weather_description": w_desc,
         "wind_speed_kmh": float(current.get("wind_speed_10m", 0.0)),
-        "observation_time": obs_time,
+        "observation_time": format_to_ist(obs_time),
         "source": "Open-Meteo Weather API",
         "source_url": "https://open-meteo.com",
         "attribution": "Weather data by Open-Meteo.com (CC-BY 4.0)",

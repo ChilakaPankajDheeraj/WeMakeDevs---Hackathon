@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
+import { formatISTTimeOnly } from '../utils/time';
 
 const AppContext = createContext();
 
@@ -11,7 +12,7 @@ export function AppProvider({ children }) {
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [backendConnected, setBackendConnected] = useState(true);
   const [connectionError, setConnectionError] = useState(null);
-  const [lastRefreshed, setLastRefreshed] = useState(new Date().toLocaleTimeString());
+  const [lastRefreshed, setLastRefreshed] = useState(formatISTTimeOnly());
 
   // Data Source Mode: Default to 'live' real Open-Meteo weather!
   const [weatherMode, setWeatherModeState] = useState('live');
@@ -62,7 +63,7 @@ export function AppProvider({ children }) {
           }
         }
       }
-      setLastRefreshed(new Date().toLocaleTimeString());
+      setLastRefreshed(formatISTTimeOnly());
     } catch (err) {
       console.warn('Backend connection issue:', err.message);
       setBackendConnected(false);

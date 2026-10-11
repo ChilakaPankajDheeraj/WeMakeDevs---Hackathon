@@ -16,6 +16,7 @@ import api from '../services/api';
 import { useApp } from '../context/AppContext';
 import RiskBadge from '../components/RiskBadge';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import { formatIST } from '../utils/time';
 
 export default function AlertCenterPage() {
   const { refreshStatus } = useApp();
@@ -190,7 +191,7 @@ export default function AlertCenterPage() {
                         {alert.risk_type}
                       </span>
                       <span className="text-xs text-slate-400">
-                        • {new Date(alert.timestamp).toLocaleString()}
+                        • {formatIST(alert.timestamp)}
                       </span>
                     </div>
 
@@ -245,7 +246,7 @@ export default function AlertCenterPage() {
                 {isAck && alert.acknowledged_at && (
                   <div className="text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-100 flex items-center justify-between">
                     <span>Acknowledged by: <strong>{alert.acknowledged_by || 'Operator'}</strong></span>
-                    <span>{new Date(alert.acknowledged_at).toLocaleString()}</span>
+                    <span>{formatIST(alert.acknowledged_at)}</span>
                   </div>
                 )}
               </div>

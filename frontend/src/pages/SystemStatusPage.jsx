@@ -16,6 +16,7 @@ import {
 import api from '../services/api';
 import { useApp } from '../context/AppContext';
 import LoadingSkeleton from '../components/LoadingSkeleton';
+import { formatIST } from '../utils/time';
 
 export default function SystemStatusPage() {
   const [statusData, setStatusData] = useState(null);
@@ -204,7 +205,7 @@ export default function SystemStatusPage() {
               The environmental telemetry, sensor readings, and predictions displayed across this command center are simulated mathematical approximations created for hackathon demonstration. They do not constitute official public health or civil defense warnings. Integrations with real IoT precipitation sensors, satellite imagery, and municipal SCADA telemetry can be plugged directly into the modular repository layer.
             </p>
             <div className="pt-2 text-[11px] font-mono text-slate-500">
-              Timestamp: {statusData?.timestamp || new Date().toISOString()}
+              Timestamp: {formatIST(statusData?.timestamp)}
             </div>
           </div>
         </>
