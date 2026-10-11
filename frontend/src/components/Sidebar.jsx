@@ -13,12 +13,23 @@ import {
   Truck,
   ShieldCheck,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Radio,
+  Cpu,
+  MapPin
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function Sidebar({ isOpen, onClose }) {
-  const { activeAlertsCount, systemStatus } = useApp();
+  const {
+    activeAlertsCount,
+    systemStatus,
+    weatherMode,
+    setWeatherMode,
+    selectedLocationId,
+    setSelectedLocationId,
+    locationsList
+  } = useApp();
 
   const navLinks = [
     { to: '/dashboard', label: 'Command Center', icon: LayoutDashboard, exact: true },
@@ -60,6 +71,42 @@ export default function Sidebar({ isOpen, onClose }) {
             </span>
           </div>
           <span className="h-2 w-2 rounded-full bg-sky-500 animate-pulse" />
+        </div>
+
+        {/* Mobile Data Source Mode Switcher inside Sidebar drawer */}
+        <div className="p-3 bg-slate-50 border-b border-slate-100 lg:hidden">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center justify-between">
+            <span>Data Source Mode</span>
+            <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${weatherMode === 'live' ? 'bg-emerald-100 text-emerald-800' : 'bg-sky-100 text-sky-800'}`}>
+              {weatherMode === 'live' ? 'LIVE' : 'DEMO'}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-200/80 rounded-xl">
+            <button
+              type="button"
+              onClick={() => setWeatherMode('demo')}
+              className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition ${
+                weatherMode === 'demo'
+                  ? 'bg-white text-sky-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Cpu className="h-3.5 w-3.5 text-sky-600" />
+              <span>Demo</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setWeatherMode('live')}
+              className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition ${
+                weatherMode === 'live'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Radio className={`h-3.5 w-3.5 ${weatherMode === 'live' ? 'animate-pulse text-white' : 'text-slate-400'}`} />
+              <span>Live Weather</span>
+            </button>
+          </div>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">

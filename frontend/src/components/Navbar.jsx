@@ -165,6 +165,51 @@ export default function Navbar({ onToggleSidebar, isSidebarOpen }) {
             </Link>
           </div>
         </div>
+
+        {/* Mobile Control Strip: Location Selector + Mode Switcher */}
+        <div className="flex md:hidden items-center justify-between gap-2 py-2 border-t border-slate-100 bg-slate-50/60 -mx-4 px-4 sm:-mx-6 sm:px-6">
+          <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2 py-1 flex-1 min-w-0 shadow-2xs">
+            <MapPin className="h-3.5 w-3.5 text-sky-600 shrink-0" />
+            <select
+              value={selectedLocationId || ''}
+              onChange={(e) => setSelectedLocationId(Number(e.target.value))}
+              className="bg-transparent text-[11px] font-semibold text-slate-700 focus:outline-none cursor-pointer truncate w-full"
+            >
+              {locationsList.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center p-0.5 bg-slate-200/80 border border-slate-300/70 rounded-lg text-xs shrink-0 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setWeatherMode('demo')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded font-semibold text-[11px] transition ${
+                weatherMode === 'demo'
+                  ? 'bg-white text-sky-700 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Cpu className="h-3 w-3 text-sky-600" />
+              <span>Demo</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setWeatherMode('live')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded font-semibold text-[11px] transition ${
+                weatherMode === 'live'
+                  ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Radio className={`h-3 w-3 ${weatherMode === 'live' ? 'animate-pulse text-white' : 'text-slate-400'}`} />
+              <span>Live</span>
+            </button>
+          </div>
+        </div>
       </div>
     </header>
   );

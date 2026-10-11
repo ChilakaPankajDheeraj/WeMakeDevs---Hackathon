@@ -3,7 +3,7 @@ import { Info, Radio, Globe } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function DisclaimerBanner({ compact = false }) {
-  const { weatherMode, weatherMeta } = useApp();
+  const { weatherMode, setWeatherMode, weatherMeta } = useApp();
   const isLive = weatherMode === 'live';
 
   if (compact) {
@@ -29,12 +29,21 @@ export default function DisclaimerBanner({ compact = false }) {
         <div className="flex items-center gap-2">
           <Radio className="h-4 w-4 text-emerald-600 shrink-0 animate-pulse" />
           <span>
-            <strong className="font-semibold text-emerald-800">Live Weather Data:</strong> Real-time atmospheric metrics sourced from Open-Meteo API (CC-BY 4.0). Groundwater, drainage, and saturation are localized simulated baselines.
+            <strong className="font-semibold text-emerald-800">Live Weather Data:</strong> Real-time atmospheric metrics sourced from Open-Meteo API (CC-BY 4.0). Groundwater & drainage are localized simulated baselines.
           </span>
         </div>
-        <div className="flex items-center gap-2 font-mono text-[11px] text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded shrink-0">
-          <Globe className="h-3 w-3" />
-          <span>Observed: {weatherMeta?.observation_time || 'Realtime Sync'}</span>
+        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+          <div className="flex items-center gap-1.5 font-mono text-[11px] text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded">
+            <Globe className="h-3 w-3" />
+            <span>Observed: {weatherMeta?.observation_time || 'Realtime Sync'}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setWeatherMode('demo')}
+            className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 border border-emerald-300 shadow-2xs transition"
+          >
+            Switch to Demo
+          </button>
         </div>
       </div>
     );
@@ -48,9 +57,19 @@ export default function DisclaimerBanner({ compact = false }) {
           <strong className="font-semibold text-sky-900">Prototype Mode • Simulated Data:</strong> Deterministic seeded environmental data for demonstration and decision-support exploration only. Not a certified emergency-warning system.
         </span>
       </div>
-      <span className="hidden md:inline font-mono text-[11px] text-sky-600 bg-sky-100/70 px-2 py-0.5 rounded shrink-0">
-        v1.0.0 MVP
-      </span>
+      <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+        <button
+          type="button"
+          onClick={() => setWeatherMode('live')}
+          className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs transition flex items-center gap-1 cursor-pointer"
+        >
+          <Radio className="h-3 w-3 animate-pulse" />
+          <span>Switch to Live Weather</span>
+        </button>
+        <span className="hidden md:inline font-mono text-[11px] text-sky-600 bg-sky-100/70 px-2 py-0.5 rounded shrink-0">
+          v1.0.0 MVP
+        </span>
+      </div>
     </div>
   );
 }
