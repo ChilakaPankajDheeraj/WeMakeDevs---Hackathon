@@ -92,8 +92,19 @@ export default function RiskMapPage() {
     } catch (err) {
       console.error('Failed to load risk map data:', err);
       if (weatherMode === 'live') {
+        console.warn('Live map data issue, automatically falling back to Demo baseline...');
         setLiveWeatherFailed(true);
-        setError('Open-Meteo Weather API failed or timed out. In Live Weather mode, AquaNex does not silently substitute simulated values.');
+        fallbackToDemoMode();
+        try {
+          const fallbackRes = await api.getRiskMap('demo');
+          setMapData(fallbackRes);
+          if (fallbackRes.locations && fallbackRes.locations.length > 0) {
+            setMapCenter([fallbackRes.locations[0].latitude, fallbackRes.locations[0].longitude]);
+            fetchLocationDetail(fallbackRes.locations[0].id);
+          }
+        } catch (fbErr) {
+          setError('Unable to load regional map data.');
+        }
       } else {
         setError('Unable to load regional map data from backend.');
       }

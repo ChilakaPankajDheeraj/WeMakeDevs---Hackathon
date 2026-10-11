@@ -56,15 +56,29 @@ export default function DashboardPage() {
     } catch (err) {
       console.error('Failed to load dashboard:', err);
       if (weatherMode === 'live') {
+        console.warn('Live Weather API unreachable, auto-falling back to Demo mode...');
         setLiveWeatherFailed(true);
-        setError('Live Weather Data unavailable: Could not reach Open-Meteo API. As required by policy, simulated data is not substituted silently.');
+        fallbackToDemoMode();
+        try {
+          const fallbackData = await api.getDashboard('demo');
+          setDashboard(fallbackData);
+          if (fallbackData) {
+            setWeatherMeta({
+              source: fallbackData.weather_source || 'Simulated Baseline (Auto-Fallback)',
+              observation_time: fallbackData.weather_observation_time || null,
+              hydrology_source: fallbackData.hydrology_source || 'AquaNex Hydrology Baseline Simulation'
+            });
+          }
+        } catch (fbErr) {
+          setError('Backend connection issue.');
+        }
       } else {
-        setError('Backend connection unavailable. Please verify that the FastAPI backend is running at http://localhost:8000.');
+        setError('Backend connection unavailable.');
       }
     } finally {
       setLoading(false);
     }
-  }, [weatherMode, setWeatherMeta]);
+  }, [weatherMode, setWeatherMeta, fallbackToDemoMode]);
 
   useEffect(() => {
     fetchDashboardData();

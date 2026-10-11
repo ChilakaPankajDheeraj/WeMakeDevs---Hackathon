@@ -13,10 +13,10 @@ export function AppProvider({ children }) {
   const [connectionError, setConnectionError] = useState(null);
   const [lastRefreshed, setLastRefreshed] = useState(new Date().toLocaleTimeString());
 
-  // Data Source Mode: 'demo' | 'live'
-  const [weatherMode, setWeatherModeState] = useState('demo');
+  // Data Source Mode: Default to 'live' real Open-Meteo weather!
+  const [weatherMode, setWeatherModeState] = useState('live');
   const [weatherMeta, setWeatherMeta] = useState({
-    source: 'Deterministic Seeded Simulation',
+    source: 'Open-Meteo Weather API (CC-BY 4.0)',
     observation_time: null,
     hydrology_source: 'AquaNex Hydrology Baseline Simulation'
   });
@@ -31,33 +31,46 @@ export function AppProvider({ children }) {
       setBackendConnected(true);
       setConnectionError(null);
 
-      // Load active weather mode from backend
+      // Load active weather mode from backend, defaulting to live
+      let activeMode = 'live';
       try {
         const modeData = await api.getWeatherMode();
         if (modeData && modeData.mode) {
+          activeMode = modeData.mode;
           setWeatherModeState(modeData.mode);
         }
       } catch (modeErr) {
         console.warn('Could not fetch initial weather mode:', modeErr);
       }
 
-      // Load locations list for global selector
-      const mapData = await api.getRiskMap(weatherMode);
-      if (mapData && mapData.locations) {
-        setLocationsList(mapData.locations);
-        if (!selectedLocationId && mapData.locations.length > 0) {
-          setSelectedLocationId(mapData.locations[0].id);
+      // Load locations list for global selector with automatic fallback
+      try {
+        const mapData = await api.getRiskMap(activeMode);
+        if (mapData && mapData.locations) {
+          setLocationsList(mapData.locations);
+          if (!selectedLocationId && mapData.locations.length > 0) {
+            setSelectedLocationId(mapData.locations[0].id);
+          }
+        }
+      } catch (mapErr) {
+        if (activeMode === 'live') {
+          console.warn('Live mode risk-map failed, auto falling back to demo baseline:', mapErr);
+          setWeatherModeState('demo');
+          const fallbackMap = await api.getRiskMap('demo');
+          if (fallbackMap && fallbackMap.locations) {
+            setLocationsList(fallbackMap.locations);
+          }
         }
       }
       setLastRefreshed(new Date().toLocaleTimeString());
     } catch (err) {
       console.warn('Backend connection issue:', err.message);
       setBackendConnected(false);
-      setConnectionError('Backend connection unavailable. Please ensure the AquaNex FastAPI server is active on port 8000.');
+      setConnectionError('Backend connection unavailable.');
     } finally {
       setIsLoadingStatus(false);
     }
-  }, [selectedLocationId, weatherMode]);
+  }, [selectedLocationId]);
 
   // Mode switcher handler
   const setWeatherMode = useCallback(async (newMode) => {

@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     ENVIRONMENT: str = "development"
     DATA_MODE_LABEL: str = "Prototype Mode • Simulated Data"
-    WEATHER_DATA_MODE: str = os.getenv("WEATHER_MODE", "demo").lower()
+    WEATHER_DATA_MODE: str = os.getenv("WEATHER_MODE", "live").lower()
     
     # Database Configuration
     DATABASE_MODE: str = os.getenv("DATABASE_MODE", "sqlite").lower()
