@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="dropFav" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="#0f172a"/>
+  <path d="M 16 7 C 16 7, 9 16, 9 20 A 7 7 0 0 0 23 20 C 23 16, 16 7, 16 7 Z" fill="url(#dropFav)"/>
+  <circle cx="16" cy="19" r="2" fill="#ffffff"/>
+</svg>

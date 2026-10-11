@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="waterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.8"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Rounded Shield -->
+  <rect width="192" height="192" rx="42" fill="#0f172a"/>
+  <!-- Concentric Radar / Climate Pulse Rings -->
+  <circle cx="96" cy="104" r="68" stroke="url(#pulseGrad)" stroke-width="2" fill="none"/>
+  <circle cx="96" cy="104" r="48" stroke="#0ea5e9" stroke-width="1.5" stroke-dasharray="4 4" fill="none" opacity="0.6"/>
+  <!-- Central AquaNex Water Intelligence Droplet -->
+  <path d="M 96 46 C 96 46, 62 92, 62 114 A 34 34 0 0 0 130 114 C 130 92, 96 46, 96 46 Z" fill="url(#waterGrad)"/>
+  <!-- Internal Neural AI Node Core -->
+  <circle cx="96" cy="112" r="9" fill="#ffffff" opacity="0.95"/>
+  <circle cx="84" cy="122" r="5" fill="#bae6fd"/>
+  <circle cx="108" cy="122" r="5" fill="#bae6fd"/>
+  <line x1="96" y1="112" x2="84" y2="122" stroke="#ffffff" stroke-width="2"/>
+  <line x1="96" y1="112" x2="108" y2="122" stroke="#ffffff" stroke-width="2"/>
+  <!-- Top Predictive Spark -->
+  <polygon points="96,36 99,42 96,48 93,42" fill="#38bdf8"/>
+</svg>
