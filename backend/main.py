@@ -5,11 +5,21 @@ REST API serving Command Center, Interactive Risk Map, Predictions,
 What-if Simulator, Tanker Optimizer, Leak Detection, and Alert Center.
 """
 
+import sys
 import logging
 import datetime
 import json
+from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import List, Optional
+
+# Ensure project root and backend dir are in sys.path regardless of execution directory
+_backend_dir = Path(__file__).resolve().parent
+_root_dir = _backend_dir.parent
+if str(_root_dir) not in sys.path:
+    sys.path.insert(0, str(_root_dir))
+if str(_backend_dir) not in sys.path:
+    sys.path.insert(0, str(_backend_dir))
 
 from fastapi import FastAPI, Depends, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -109,6 +119,8 @@ app = FastAPI(
     title=settings.APP_NAME,
     description=settings.APP_DESCRIPTION,
     version=settings.APP_VERSION,
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json",
     lifespan=lifespan
 )
 
