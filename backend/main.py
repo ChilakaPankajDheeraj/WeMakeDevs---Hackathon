@@ -6,6 +6,8 @@ What-if Simulator, Tanker Optimizer, Leak Detection, and Alert Center.
 """
 
 import sys
+import os
+import types
 import logging
 import datetime
 import json
@@ -13,13 +15,20 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
-# Ensure project root and backend dir are in sys.path regardless of execution directory
+# Ensure 'backend' module is always resolvable, even when running with root in 'backend' (e.g. Vercel)
 _backend_dir = Path(__file__).resolve().parent
-_root_dir = _backend_dir.parent
-if str(_root_dir) not in sys.path:
-    sys.path.insert(0, str(_root_dir))
+if "backend" not in sys.modules:
+    _pkg = types.ModuleType("backend")
+    _pkg.__path__ = [str(_backend_dir)]
+    _init_file = _backend_dir / "__init__.py"
+    if _init_file.exists():
+        _pkg.__file__ = str(_init_file)
+    sys.modules["backend"] = _pkg
+
 if str(_backend_dir) not in sys.path:
     sys.path.insert(0, str(_backend_dir))
+if str(_backend_dir.parent) not in sys.path:
+    sys.path.insert(0, str(_backend_dir.parent))
 
 from fastapi import FastAPI, Depends, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
